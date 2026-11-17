@@ -1,35 +1,44 @@
 <!DOCTYPE html>
 <html><head><meta charset="utf-8">
 <link rel="stylesheet" href="https://p.trellocdn.com/power-up.css">
+<link rel="stylesheet" href="./style.css">
 <script src="https://p.trellocdn.com/power-up.min.js"></script>
-<style>.f{border-bottom:1px solid #ddd;padding:6px 0}.f input,.f select{margin:2px 0}small{color:#666}</style>
-</head><body><div id="root">Loading…</div>
+</head><body><div id="root"></div>
 <script src="./shared.js"></script>
 <script>
 var t = TrelloPowerUp.iframe();
 var fields = [];
+var TYPES = ['text', 'number', 'dropdown', 'date', 'checkbox'];
 function persist() { return t.set('board', 'shared', 'fields', fields); }
+function el(tag, cls, text) { var e = document.createElement(tag); if (cls) e.className = cls; if (text) e.textContent = text; return e; }
 function draw() {
   var root = document.getElementById('root'); root.innerHTML = '';
+  root.appendChild(el('p', 'hint', 'Fields appear on every card in this board.'));
+  if (!fields.length) root.appendChild(el('div', 'empty', 'No fields yet.'));
   fields.forEach(function (f, i) {
-    var d = document.createElement('div'); d.className = 'f';
-    d.innerHTML = '<input class="n" placeholder="Name"> <select class="ty"><option>text</option><option>number</option><option>dropdown</option><option>date</option><option>checkbox</option></select>' +
-      '<input class="o" placeholder="Options, comma separated"><label><input type="checkbox" class="fr"> Show on card front</label> <button class="rm mod-danger">Remove</button>';
-    d.querySelector('.n').value = f.name; d.querySelector('.ty').value = f.type;
-    d.querySelector('.o').value = (f.options || []).join(', ');
-    d.querySelector('.o').style.display = f.type === 'dropdown' ? '' : 'none';
-    d.querySelector('.fr').checked = !!f.front;
-    d.querySelector('.n').onchange = function (e) { f.name = e.target.value; persist(); };
-    d.querySelector('.ty').onchange = function (e) { f.type = e.target.value; persist(); draw(); };
-    d.querySelector('.o').onchange = function (e) { f.options = e.target.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); persist(); };
-    d.querySelector('.fr').onchange = function (e) { f.front = e.target.checked; persist(); };
-    d.querySelector('.rm').onclick = function () { fields.splice(i, 1); persist(); draw(); };
-    root.appendChild(d);
+    var item = el('div', 'item'), top = el('div', 'top');
+    var name = el('input'); name.type = 'text'; name.placeholder = 'Field name'; name.value = f.name;
+    var type = el('select'); TYPES.forEach(function (x) { var o = el('option', '', x[0].toUpperCase() + x.slice(1)); o.value = x; type.appendChild(o); });
+    type.value = f.type;
+    var rm = el('button', 'btn icon', '✕'); rm.title = 'Remove field';
+    top.appendChild(name); top.appendChild(type); top.appendChild(rm); item.appendChild(top);
+    if (f.type === 'dropdown') {
+      var d = el('div', 'opts'), o = el('input'); o.type = 'text'; o.placeholder = 'Options, separated by commas';
+      o.value = (f.options || []).join(', '); d.appendChild(o); item.appendChild(d);
+      o.onchange = function () { f.options = o.value.split(',').map(function (s) { return s.trim(); }).filter(Boolean); persist(); };
+    }
+    var foot = el('div', 'foot'), lab = el('label', 'check'), cb = el('input'); cb.type = 'checkbox'; cb.checked = !!f.front;
+    lab.appendChild(cb); lab.appendChild(document.createTextNode('Show on card front')); foot.appendChild(lab); item.appendChild(foot);
+    name.onchange = function () { f.name = name.value; persist(); };
+    type.onchange = function () { f.type = type.value; persist(); draw(); };
+    cb.onchange = function () { f.front = cb.checked; persist(); };
+    rm.onclick = function () { fields.splice(i, 1); persist(); draw(); };
+    root.appendChild(item);
   });
-  var add = document.createElement('button'); add.className = 'mod-primary'; add.textContent = 'Add field';
+  var add = el('button', 'btn primary', '+ Add field');
   add.onclick = function () { fields.push({ id: uid(), name: 'New field', type: 'text', front: false }); persist(); draw(); };
   root.appendChild(add);
-  t.sizeTo('#root');
+  t.sizeTo('#root').catch(function () {});
 }
 t.render(function () { return getFields(t).then(function (f) { fields = f.map(function (x) { return Object.assign({}, x); }); draw(); }); });
 </script></body></html>
