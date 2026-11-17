@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8">
+<link rel="stylesheet" href="https://p.trellocdn.com/power-up.css">
+<script src="https://p.trellocdn.com/power-up.min.js"></script>
+<style>.row{margin-bottom:8px}label{display:block;font-weight:600}input[type=checkbox]{width:auto}</style>
+</head><body><div id="root">Loading…</div>
+<script src="./shared.js"></script>
+<script>
+var t = TrelloPowerUp.iframe();
+var values = {};
+function save() { return t.set('card', 'shared', 'values', values); }
+function render(fields) {
+  var root = document.getElementById('root');
+  root.innerHTML = '';
+  fields.forEach(function (f) {
+    var row = document.createElement('div'); row.className = 'row';
+    var lab = document.createElement('label'); lab.textContent = f.name; row.appendChild(lab);
+    var el;
+    if (f.type === 'dropdown') {
+      el = document.createElement('select');
+      [''].concat(f.options || []).forEach(function (o) {
+        var op = document.createElement('option'); op.value = o; op.textContent = o || '—'; el.appendChild(op);
+      });
+    } else {
+      el = document.createElement('input');
+      el.type = { number: 'number', date: 'date', checkbox: 'checkbox' }[f.type] || 'text';
+    }
+    if (f.type === 'checkbox') el.checked = !!values[f.id]; else el.value = values[f.id] == null ? '' : values[f.id];
+    el.addEventListener('change', function () {
+      var v = f.type === 'checkbox' ? el.checked : el.value;
+      if (f.type === 'number' && v !== '') v = Number(v);
+      values[f.id] = v; save();
+    });
+    row.appendChild(el); root.appendChild(row);
+  });
+  t.sizeTo('#root');
+}
+t.render(function () {
+  return Promise.all([getFields(t), getValues(t)]).then(function (r) { values = r[1]; render(r[0]); });
+});
+</script></body></html>
